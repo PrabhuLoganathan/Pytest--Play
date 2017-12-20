@@ -38,7 +38,7 @@ class SplinterCommandProvider(object):
             format
         """
         selector = locator['value']
-        locator_type = locator['type']
+        locator_type = locator['type'].replace(' selector', '')
 
         if locator_type not in self.SELECTOR_TYPES:
             raise ValueError('Not allowed selector type')
@@ -71,10 +71,16 @@ class SplinterCommandProvider(object):
         return wrapper
 
     # commands
+
+    def _clean_var(self, value):
+        """ Clean variable """
+        return re.sub(r'{{([^}]*)}}', r'$\g<1>', value)
+
     @condition
     def command_get(self, command):
         """ get """
-        self.engine.navigation.page.driver_adapter.open(command['url'])
+        self.engine.navigation.page.driver_adapter.open(
+            self._clean_var(command['url']))
 
     @wait_for_element_visible
     @condition
@@ -88,7 +94,7 @@ class SplinterCommandProvider(object):
     def command_setElementText(self, command):
         """ setElementText """
         selector = self.locator_translate(command['locator'])
-        text = command['text']
+        text = self._clean_var(command['text'])
         self.engine.navigation.page.find_element(*selector).fill(text)
 
     @wait_for_element_visible
@@ -159,11 +165,15 @@ class SplinterCommandProvider(object):
             result = element.visible
         assert result
 
+    def _clean_keys(self, value):
+        """ Clean keys """
+        return re.sub(r'!{([^}]*)}', r'\g<1>', value)
+
     @wait_for_element_visible
     @condition
     def command_sendKeysToElement(self, command):
         """ sendKeysToElement """
-        key = command['text']
+        key = self._clean_keys(command['text'])
         if key not in self.KEYS:
             raise ValueError('Key not allowed', key)
 
@@ -178,22 +188,32 @@ class SplinterCommandProvider(object):
         wait_time = float(command['waitTime'])
         sleep(wait_time/1000.0)
 
+    def _clean_verify_text(self, value):
+        """ Clean verify text """
+        return re.sub(r'\*([^\*]*)\*', r'\g<1>', value)
+
     @wait_for_element_visible
     @condition
     def command_verifyText(self, command):
         """ verifyText """
         selector = self.locator_translate(command['locator'])
         negated = command.get('negated', False)
-        pattern = self.engine.parametrizer.parametrize(command['text'])
+        pattern = self.engine.parametrizer.parametrize(
+            self._clean_verify_text(command['text']))
         element = self.engine.navigation.page.find_element(*selector)
         match = re.search(pattern, element.text)
         assert not negated and match
+
+    def _clean_script(self, value):
+        """ Clean expression (wipeout return)"""
+        return re.sub(r'^[ ]*return[ ]*', '', value)
 
     @condition
     def command_storeEval(self, command):
         """ storeEval """
         variable = command['variable']
-        script = self.engine.parametrizer.parametrize(command['script'])
+        script = self._clean_script(
+            self.engine.parametrizer.parametrize(command['script']))
         value = self.engine.navigation.page.driver.evaluate_script(script)
         self.engine.variables[variable] = value
 
@@ -201,14 +221,16 @@ class SplinterCommandProvider(object):
     def command_verifyEval(self, command):
         """ verifyEval """
         value = command['value']
-        script = self.engine.parametrizer.parametrize(command['script'])
+        script = self._clean_script(
+            self.engine.parametrizer.parametrize(command['script']))
         assert value == self.engine.navigation.page.driver.evaluate_script(
             script)
 
     @condition
     def command_eval(self, command):
         """ eval """
-        script = self.engine.parametrizer.parametrize(command['script'])
+        script = self._clean_script(
+            self.engine.parametrizer.parametrize(command['script']))
         self.engine.navigation.page.driver.evaluate_script(script)
 
     @condition
