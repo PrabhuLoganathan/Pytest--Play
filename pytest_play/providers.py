@@ -206,6 +206,12 @@ class SplinterCommandProvider(object):
         match = re.search(pattern, element.text)
         assert not negated and match
 
+    @wait_for_element_visible
+    @condition
+    def command_assertText(self, command):
+        # ghostinspector backwards compatibility. Use verifyText instead
+        self.command_verifyText(command)
+
     def _clean_script(self, value):
         """ Clean expression (wipeout return)"""
         return re.sub(r'^[ ]*return[ ]*', '', value)
