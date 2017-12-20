@@ -74,7 +74,8 @@ class SplinterCommandProvider(object):
 
     def _clean_var(self, value):
         """ Clean variable """
-        return re.sub(r'{{([^}]*)}}', r'$\g<1>', value)
+        return self.engine.parametrizer.parametrize(
+            re.sub(r'{{([^}]*)}}', r'$\g<1>', value))
 
     @condition
     def command_get(self, command):
@@ -190,7 +191,8 @@ class SplinterCommandProvider(object):
 
     def _clean_verify_text(self, value):
         """ Clean verify text """
-        return re.sub(r'\*([^\*]*)\*', r'\g<1>', value)
+        return self.engine.parametrizer.parametrize(
+            re.sub(r'\*([^\*]*)\*', r'\g<1>', value))
 
     @wait_for_element_visible
     @condition
