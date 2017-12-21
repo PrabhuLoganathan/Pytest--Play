@@ -96,7 +96,12 @@ class SplinterCommandProvider(object):
         """ setElementText """
         selector = self.locator_translate(command['locator'])
         text = self._clean_var(command['text'])
-        self.engine.navigation.page.find_element(*selector).fill(text)
+        element = self.engine.navigation.page.find_element(*selector)
+        if element._element.tag_name == 'select':
+            # backwards compatibility
+            self.command_select(command)
+        else:
+            element.fill(text)
 
     @wait_for_element_visible
     @condition
